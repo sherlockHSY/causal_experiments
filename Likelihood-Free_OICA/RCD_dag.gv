@@ -1,0 +1,13 @@
+digraph RCD_dag {
+	node [shape=circle]
+	x0 [label=x0]
+	x1 [label=x1]
+	x2 [label=x2]
+	x3 [label=x3]
+	x1 -> x0 [label=nan]
+	x3 -> x0 [label=0.1639]
+	x0 -> x1 [label=nan]
+	x3 -> x1 [label=0.5278]
+	x0 -> x2 [label=0.9623]
+	x3 -> x2 [label=-0.5474]
+}
