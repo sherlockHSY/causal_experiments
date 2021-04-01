@@ -1,0 +1,15 @@
+digraph test_model {
+	node [shape=circle]
+	x0 [label=x0]
+	x1 [label=x1]
+	x2 [label=x2]
+	x3 [label=x3]
+	x4 [label=x4 style=dashed]
+	x0 -> x1 [label=0.5512]
+	x2 -> x1 [label=-0.9816]
+	x3 -> x1 [label=0.5846]
+	x0 -> x2 [label=-0.6317]
+	x0 -> x3 [label=-0.3744]
+	x2 -> x3 [label=0.269]
+	x4 -> x3 [label=0.3224 style=dashed]
+}

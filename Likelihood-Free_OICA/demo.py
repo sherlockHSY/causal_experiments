@@ -1,50 +1,48 @@
 import numpy as np
+import itertools
 
-# 参数
-data_size = 3000
-num_lantents = 1
-num_components = 4
-num_mixtures = 3  # 观察变量数量
+from torch.nn.functional import mse_loss
+import LFOICA_prune
+from sklearn.metrics import mean_squared_error, r2_score
+import pandas as pd
 
-sigmaList = [0.001, 0.01]
-batch_size = 2000
-num_epochs = 1000
-lr_T = 0.01
-lr_G = 0.001
-reg_lambda = 0.
-print_int = 500
+num_obs = 4
+num_lat = 1
+test_data = np.load('test_result_4_1.npz')
+X = test_data['X']
+A_real = test_data['A']
+e = test_data['e']
+B_real = test_data['B_real']
+B_RCD =  test_data['B_RCD']
+B_LFOICA_set = test_data['B_LFOICA_set']
+B_LFOICA = B_LFOICA_set[0]
+N = B_real.shape[0]
 
-# 生成高斯噪声的函数
-def get_noises(n):
-    x = np.random.normal(0.0, 0.5, n) ** 3
-    return np.array(x)
+# confounder
+TP,FP,TN,FN =0,0,0,0
+B_lat = B_real[:,num_obs:]
+positive = len(np.nonzero(B_lat)[0])
 
-# 生成测试数据
-components = np.zeros((data_size,num_components)) # (3000,4)
-for i in range(num_components):
-    c = get_noises(data_size)
-    components[:,i] = c
-    
-# 原始数据X
-X = np.zeros((data_size,num_components)) # (3000,3)
-X[:,0] = components[:,0]
-X[:,3] = components[:,3] # x3 是隐变量
-X[:,1] = components[:,1] + 2 * X[:,0] + X[:,3] 
-X[:,2] = components[:,2] + 0.3 * X[:,1]
+for j in range(num_obs,N):
+    for i in range(num_obs):
+        if B_real[i][j] != 0. and len(np.nonzero(np.isnan(B_RCD[i]))[0]) > 0:
+            TP = TP + 1
+        if B_real[i][j] == 0. and len(np.nonzero(np.isnan(B_RCD[i]))[0]) > 0:
+            FP = FP + 1   
 
-B = np.array([[0,0,0,0],[2,0,0,1],[0,0.3,0,0],[0,0,0,0]])
-A = np.linalg.inv(np.eye(num_components)-B)
-mixtures = X[:,:num_components-1]
-A = A[:num_components-1,:]
+precision_rcd_l = TP/(TP+FP)
+recall_rcd_l = TP/positive
+F1_rcd_l = (2 * precision_rcd_l * recall_rcd_l)/(precision_rcd_l + recall_rcd_l)
 
-data_arrs = {
-    'arr_0':mixtures,
-    'arr_1':components,
-    'arr_2':A
-}
-data_arrs['arr_0']
-data_arrs['arr_1']
-data_arrs['arr_2'] 
+print(precision_rcd_l)
+print(recall_rcd_l)
+print(F1_rcd_l)
 
 
-i = 1
+# X1 = e @ A_real.T
+# m1 = mean_squared_error(X, X1)
+# print(m1)
+
+
+
+

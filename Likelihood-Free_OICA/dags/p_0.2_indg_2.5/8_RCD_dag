@@ -1,0 +1,15 @@
+digraph RCD_dag {
+	node [shape=circle]
+	x0 [label=x0]
+	x1 [label=x1]
+	x2 [label=x2]
+	x3 [label=x3]
+	x4 [label=x4]
+	x5 [label=x5]
+	x6 [label=x6]
+	x7 [label=x7]
+	x4 -> x0 [label=0.5293]
+	x0 -> x3 [label=-0.828]
+	x4 -> x3 [label=0.2007]
+	x4 -> x7 [label=0.5002]
+}

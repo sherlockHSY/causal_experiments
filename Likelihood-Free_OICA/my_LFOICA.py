@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.linalg.decomp_svd import null_space
 import torch
 import torch.nn as nn
 from torch import Tensor
@@ -13,6 +14,8 @@ from torch.utils.data import Dataset, DataLoader
 import argparse
 from libs.pytorch_pgm import PGM, prox_soft, prox_plus
 from scipy.linalg import lu
+import itertools
+import LFOICA_prune
 
 # 使用gpu
 device = torch.device('cuda:0')
@@ -39,6 +42,7 @@ class dataset_simul(Dataset):
         assert batch_size <= self.data_size
         np.random.shuffle(self.components)
         return self.components[0:batch_size, :]
+    
 
 
 # transform random noise into components
@@ -95,9 +99,44 @@ class Generative_net(nn.Module):
         result = torch.mm(components, self.A.t())
         return result
 
+def perms(x):
+    """Python equivalent of MATLAB perms."""
+    x = range(x)
+    return np.vstack(list(itertools.permutations(x)))[::-1]
+
+def matchbases(Aest, N):
+    Nest = len(Aest)
+    Amatched = []
+
+    Amatched.append(Aest[0])
+    A1 = Amatched[0]
+
+    for j in range(1,Nest):
+    
+        # Go through all permutations, pick best fit
+        bestval = np.inf
+        allperms = perms(N) # 所有可能的排列 组合
+        nperms = allperms.shape[0]
+        A2 = Aest[j]
+        # 比较，选出最优的排列
+        Am = None
+        for i in range(nperms):
+            A2p = A2[:,(allperms[i,:])]
+            A2pp = A2p.conj().transpose()
+            s = np.sign(np.diag(A2pp @ A1))
+            A2p = A2p @ np.diag(s)
+            c = np.sum(np.sum(abs(A2p - A1)))
+            if c<bestval:
+                bestval = c
+                Am = A2p
+	
+        Amatched.append(Am)
+
+    return Amatched
 
 
-def LFOICA_exp(data_arrs, num_mixtures, num_components, num_epochs = 100, batch_size = 80, print_int = 10):
+
+def LFOICA_exp(data_arrs, num_mixtures, num_components, means,eng,num_epochs = 100, batch_size = 80, print_int = 10):
     
     # 参数设置
     sigmaList = [0.001, 0.01]
@@ -118,8 +157,8 @@ def LFOICA_exp(data_arrs, num_mixtures, num_components, num_epochs = 100, batch_
     generator_optimizer = optim.Adam(generator.parameters(), lr=lr_G)
 
     for epoch in range(num_epochs):
-        if epoch % print_int == 0:
-            print("正在迭代第 %d 次" % epoch)
+        # if epoch % print_int == 0:
+        #     print("正在迭代第 %d 次" % epoch)
         for step, (real_mixtures, real_components) in enumerate(dataloader):
             generator.zero_grad()
             transformer.zero_grad()
@@ -132,27 +171,92 @@ def LFOICA_exp(data_arrs, num_mixtures, num_components, num_epochs = 100, batch_
             transformer_optimizer.step()
             generator_optimizer.step()
     
-    print('LFOICA实验结束,共迭代 {} 次'.format(epoch+1))
+    # print('共迭代 {} 次'.format(epoch+1))
     MSE_func = nn.MSELoss()
     real_A = torch.abs(dataset.get_real_A())
     fake_A = torch.abs(list(generator.parameters())[0]).detach().cpu()
     real_A, fake_A = normalize_mixing_matrix(real_A, fake_A)
     # for i in range(num_components):
     #     fake_A[:, i]/=normalize_factor[i]
-    print('estimated A', fake_A)
-    print('real A', real_A)
+    # print('estimated A', fake_A)
+    # print('real A', real_A)
     MSE = MSE_func(real_A, fake_A)
     print('MSE: {}, MMD: {}'.format(MSE, MMD))
 
     
     # 需要剪枝
+    real_A_nd = real_A.numpy()
+    fake_A_nd = fake_A.numpy()
+    # np.savez('test_data_9_1',fake_A=fake_A_nd,means=means)
+    # 要进行剪枝，利用lvlingam的剪枝策略
+    lvmodelset = LFOICA_prune.estimate2model(fake_A_nd, means, eng)
+    return fake_A_nd,lvmodelset
+    
+    # 计算均值
+    means =  dataset.get_means()
+
+    # 利用ica_lingam的剪枝策略
+    B1 = LFOICA_prune.Prune(X, real_A, fake_A, num_components)
+    
 
     # 恢复出 B
-    fake_A_nd = fake_A.numpy()
-    fake_A_nd = np.append(fake_A_nd,np.eye(num_components)[num_mixtures:,:],axis=0)
-    print(fake_A_nd)
+
+    # fake_A_nd = np.append(fake_A_nd, np.eye(num_components)[num_mixtures:,:],axis=0)
+    
+    
+    # bootstrap obtaining a set of estimates Ai representing our uncertainty regarding the elements of the mixing matrix
+    # Nest = 20
+    # Aest = []
+    # mest = []
+    # noiselevel = 0.1 # 估计时的噪声
+    # for i in range(Nest):
+    #     rp = np.random.permutation(num_components)
+    #     Aest.append(fake_A_nd[:, rp])
+    #     # Aest[i] = Aest[i] + noiselevel * np.random.randn(num_mixtures, num_components)
+    #     mest.append(noiselevel * np.random.randn(means.shape[0],means.shape[1]))
+
+    # # Match up all the bases
+    # Amatched = matchbases(Aest, num_components)
+  
+    # # Calculate mean and variance of 'estimated' ICA coefficients
+    # Am = np.zeros(fake_A_nd.shape)
+    # mm = np.zeros(means.shape)
+    # for i in range(Nest):
+    #     Am = Am + Amatched[i]
+    #     mm = mm + mest[i]
+
+    # Am = Am / Nest
+    # mm = mm / Nest;
+    # Av = np.zeros(Am.shape)
+    # for i in range(Nest):
+    #   Av = Av + (Amatched[i] - Am) ** 2
+    
+    # Av = Av / Nest
+  
+    # # Infer zeros and set them to zero
+    # threshold = 1
+    # zeromat = np.abs(Am) < (threshold * np.sqrt(Av))
+    # for i in range(zeromat.shape[0]):
+    #     for j in range(zeromat.shape[1]):
+    #        if zeromat[i,j] == True:
+    #            Am[i,j] = 0
+    # print('indetify zeros in A')
+    # print(zeromat)
+    # real_zeromat = (real_A_nd == 0)
+    # print(real_zeromat)
+    # print(zeromat)
+    # for i in range(Nest):
+    #     Amatched[i](zeromat) = 0;
+
+    
+    # Calculate statistics on success in identifying zeros
+
+
+
     
     # 寻找因果顺序
+    # 1e12
+
 
     # identify zero
     
