@@ -62,6 +62,7 @@ def calculate_rcd(X,e,B_real,B_est,num_obs,num_lat):
 
 # 计算LFOICA算法的指标
 def calculate_lfoica(X,e,B_real,B_est,num_obs,num_lat):
+    
     N = num_obs + num_lat
     # causality
     TP,FP,TN,FN =0,0,0,0
@@ -74,20 +75,26 @@ def calculate_lfoica(X,e,B_real,B_est,num_obs,num_lat):
             elif B_real[i][j] ==0. and B_est[i][j] != 0.:  
                 FP = FP + 1            
 
-    precision_c = TP/(TP+FP) if (TP+FP)!=0 else 0
-    recall_c = TP/(TP+FN) if (TP+FN)!=0 else 0
-    F1_c = (2 * precision_c * recall_c) / (precision_c + recall_c) if (precision_c + recall_c)!=0 else 0
+    precision_c = TP/(TP+FP) if (TP+FP)!=0. else 0.
+    recall_c = TP/(TP+FN) if (TP+FN)!=0. else 0.
+    F1_c = (2 * precision_c * recall_c) / (precision_c + recall_c) if (precision_c + recall_c)!=0. else 0.
     
     # confounder
     TP,FP,TN,FN =0,0,0,0
+    k = B_real.shape[1] - B_est.shape[1]
     for j in range(num_obs,N):
+        if j >= B_est.shape[1]:
+            break
         for i in range(N):
+            if i>=B_est.shape[0]:
+                break
             if B_real[i][j] !=0. and B_est[i][j] != 0.:
                 TP = TP + 1
             elif B_real[i][j] !=0. and B_est[i][j] == 0.:   
                 FN = FN + 1
             elif B_real[i][j] ==0. and B_est[i][j] != 0.:  
-                FP = FP + 1            
+                FP = FP + 1      
+            k = k - 1      
 
     precision_l = TP/(TP+FP) if (TP+FP)!=0 else 0
     recall_l = TP/(TP+FN) if (TP+FN)!=0 else 0

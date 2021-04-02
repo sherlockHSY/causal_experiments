@@ -1,0 +1,13 @@
+digraph LFOICA_dag {
+	node [shape=circle]
+	x0 [label=x0]
+	x1 [label=x1]
+	x2 [label=x2]
+	x3 [label=x3]
+	x4 [label=x4]
+	x5 [label=x5 style=dashed]
+	x3 -> x0 [label=0.5216]
+	x5 -> x0 [label=0.6915 style=dashed]
+	x5 -> x1 [label=0.7169 style=dashed]
+	x4 -> x2 [label=0.6223]
+}

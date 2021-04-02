@@ -165,6 +165,7 @@ if __name__ == '__main__':
     print('--调用成功--')
 
     indegree_arr = [1,1.5,2,2.5,3]
+    # indegree_arr = [1]
     p_arr = [0.1,0.2,0.3,0.4,0.5]
     randomseed_arr = [0,10,20,30,40,50,60,70,80,90]
     num_measured_var = 10
@@ -181,23 +182,29 @@ if __name__ == '__main__':
                 # print('---真实因果顺序---')
                 # print(causal_order)
                 # plot_function.plotmodel(B, lat, p,indegree,0,i)
-                data_arrs = {
-                    'arr_0': X,
-                    'arr_1': e,
-                    'arr_2': A
-                }
+                # data_arrs = {
+                #     'arr_0': X,
+                #     'arr_1': e,
+                #     'arr_2': A
+                # }
 
                 # 调用LFOICA 
-                print('--开始LFOICA实验--')
-                algorithm = 'LFOICA'
-                start = time.time()
-                fake_A,lvmodelset = LFOICA_exp(data_arrs, num_obs, num_measured_var,means,eng)
-                B_est = lvmodelset[0]
-                end = time.time()
-                run_time = end-start
-                # 计算指标
-                precision_c,recall_c,F1_score_c,precision_l,recall_l,F1_score_l,my_mse = calculate_lfoica(X,e,B,B_est,num_obs,num_lat)
-                plot_function.plotmodel(lvmodelset[0], lat, p,indegree,1,i)
+                # print('--开始LFOICA实验--')
+                # algorithm = 'LFOICA'
+                # start = time.time()
+                # fake_A,lvmodelset = LFOICA_exp(data_arrs, num_obs, num_measured_var,means,eng)
+                # if len(lvmodelset)==0:
+                #     precision_c,recall_c,F1_score_c,precision_l,recall_l,F1_score_l,my_mse = 0., 0., 0., 0., 0., 0., 0.,
+                #     end = time.time()
+                #     run_time = end-start
+                # else:
+                #     B_est = lvmodelset[0]
+                #     end = time.time()
+                #     run_time = end-start
+                #     # 计算指标
+                #     precision_c,recall_c,F1_score_c,precision_l,recall_l,F1_score_l,my_mse = calculate_lfoica(X,e,B,B_est,num_obs,num_lat)
+                #     plot_function.plotmodel(B_est, lat, p,indegree,1,i)
+                
                     
                 # 调用RCD
                 # print('--开始RCD实验--')
@@ -222,16 +229,16 @@ if __name__ == '__main__':
                 # warnings.filterwarnings('ignore', category=UserWarning)
                 
                 # 调用ParceLiNGAM
-                # print('--开始ParceLiNGAM实验--')
-                # algorithm = 'ParceLiNGAM'
-                # start = time.time()
-                # model2 = lingam.BottomUpParceLiNGAM()
-                # model2.fit(X)
-                # end = time.time()
-                # run_time = end -start
-                # B_Parce = model2.adjacency_matrix_
-                # precision_c,recall_c,F1_score_c,precision_l,recall_l,F1_score_l,my_mse = calculate_rcd(X,e,B,B_Parce,num_obs,num_lat)
-                # plot_function.plotmodel(B_Parce,lat,p,indegree,3,i)
+                print('--开始ParceLiNGAM实验--')
+                algorithm = 'ParceLiNGAM'
+                start = time.time()
+                model2 = lingam.BottomUpParceLiNGAM()
+                model2.fit(X)
+                end = time.time()
+                run_time = end -start
+                B_Parce = model2.adjacency_matrix_
+                precision_c,recall_c,F1_score_c,precision_l,recall_l,F1_score_l,my_mse = calculate_rcd(X,e,B,B_Parce,num_obs,num_lat)
+                plot_function.plotmodel(B_Parce,lat,p,indegree,3,i)
 
                 aver_time = aver_time + run_time
                 P_c = P_c + precision_c

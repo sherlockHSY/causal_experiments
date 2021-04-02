@@ -391,7 +391,7 @@ def estimate2model(Aobs, means,eng):
     dummy = np.sort(-abs(Aobs.flatten('F')))
     sortind = np.unravel_index(np.argsort(-abs(Aobs), axis=None), Aobs.shape)
     nind = len(Aobs.flatten('F'))
-    minzeros = int(No * (No - 1) / 2)
+    minzeros = int(No * (No + 1) / 2)
     patnum = 0
     
     existzeros = len(np.nonzero(Aobs)[0])
@@ -411,7 +411,7 @@ def estimate2model(Aobs, means,eng):
         if np.any(np.sum(abs(Azero), axis=1) < 1e-9):
             continue
         lvmodelset = basis2model(Azero, means, eng)
-        # set the smallest(in absolute value) element to zero
+        
         if len(lvmodelset)>0:
             # 如果lvmodelset为空，那么说明没有隐变量，或者Azero的行数大于列数
             break
