@@ -49,3 +49,7 @@ def test_gen_artificial_data(plot=False, n_confounders=1):
     plt.figure()
     plt.hist(data['confs'])
     plt.title('Confounders')
+
+if __name__ == '__main__':
+    test_gen_artificial_data()
+    

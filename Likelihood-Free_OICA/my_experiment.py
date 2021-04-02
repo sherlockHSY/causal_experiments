@@ -160,9 +160,9 @@ def gen_data(indegree, p, randomseed,num_measured_var,data_size=1000):
     
 if __name__ == '__main__':
  
-    print('--正在调用matlab引擎--')
-    eng = matlab.engine.start_matlab()
-    print('--调用成功--')
+    # print('--正在调用matlab引擎--')
+    # eng = matlab.engine.start_matlab()
+    # print('--调用成功--')
 
     indegree_arr = [1,1.5,2,2.5,3]
     # indegree_arr = [1]

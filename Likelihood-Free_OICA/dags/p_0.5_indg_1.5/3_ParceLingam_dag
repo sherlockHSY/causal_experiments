@@ -1,0 +1,16 @@
+digraph ParceLingam_dag {
+	node [shape=circle]
+	x0 [label=x0]
+	x1 [label=x1]
+	x2 [label=x2]
+	x3 [label=x3]
+	x4 [label=x4]
+	x2 -> x0 [label=0.0717]
+	x3 -> x0 [label=0.3734]
+	x4 -> x0 [label=0.0956]
+	x0 -> x1 [label=0.91]
+	x3 -> x1 [label=-0.0969]
+	x4 -> x1 [label=-0.2777]
+	x2 -> x3 [label=0.1226]
+	x2 -> x4 [label=0.8757]
+}
