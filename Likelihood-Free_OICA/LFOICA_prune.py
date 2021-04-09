@@ -1,168 +1,11 @@
-from scipy.optimize import linear_sum_assignment
-from scipy.linalg import lu
-import itertools
 import numpy as np
 from scipy.optimize.optimize import main
 from sklearn import linear_model
 from sklearn.linear_model import LassoLarsIC, LinearRegression
-from dec2bin import *
 import matlab.engine
-from scipy.linalg import lu
+
 import itertools
-import plot_function
-import math
-import numpy.matlib
 
-def search_causal_order(matrix):
-    """Obtain a causal order from the given matrix strictly.
-
-    Parameters
-        ----------
-    matrix : array-like, shape (n_features, n_samples)
-            Target matrix.
-
-    Return
-        ------
-    causal_order : array, shape [n_features, ]
-        A causal order of the given matrix on success, None otherwise.
-    """
-    causal_order = []
-
-    row_num = matrix.shape[0]
-    original_index = np.arange(row_num)
-    
-    while 0 < len(matrix):
-        # find a row all of which elements are zero
-        row_index_list = np.where(np.sum(np.abs(matrix), axis=1) == 0)[0]
-        if len(row_index_list) == 0:
-            break
-
-        target_index = row_index_list[0]
-    
-        # append i to the end of the list
-        causal_order.append(original_index[target_index])
-        original_index = np.delete(original_index, target_index, axis=0)
-
-        # remove the i-th row and the i-th column from matrix
-        mask = np.delete(np.arange(len(matrix)), target_index, axis=0)
-        matrix = matrix[mask][:, mask]
-
-    if len(causal_order) != row_num:
-        causal_order = None
-
-    return causal_order
-
-def estimate_causal_order(matrix):
-    """Obtain a lower triangular from the given matrix approximately.
-
-    Parameters
-        ----------
-    matrix : array-like, shape (n_features, n_samples)
-            Target matrix.
-        
-    Return
-    ------
-    causal_order : array, shape [n_features, ]
-        A causal order of the given matrix on success, None otherwise.
-    """
-    causal_order = None
-
-    # set the m(m + 1)/2 smallest(in absolute value) elements of the matrix to zero
-    pos_list = np.argsort(np.abs(matrix), axis=None)
-    pos_list = np.vstack(np.unravel_index(pos_list, matrix.shape)).T
-    initial_zero_num = int(matrix.shape[0] * (matrix.shape[0] + 1) / 2)
-    for i, j in pos_list[:initial_zero_num]:
-        matrix[i, j] = 0
-
-    for i, j in pos_list[initial_zero_num:]:
-        # set the smallest(in absolute value) element to zero
-        matrix[i, j] = 0
-
-        causal_order = search_causal_order(matrix)
-        if causal_order is not None: 
-            break
-
-    return causal_order
-
-def predict_adaptive_lasso(X, predictors, target, gamma=1.0):
-    """Predict with Adaptive Lasso.
-
-    Parameters
-    ----------
-    X : array-like, shape (n_samples, n_features)
-        Training data, where n_samples is the number of samples
-        and n_features is the number of features.
-    predictors : array-like, shape (n_predictors)
-        Indices of predictor variable.
-    target : int
-        Index of target variable.
-
-    Returns
-    -------
-    coef : array-like, shape (n_features)
-        Coefficients of predictor variable.
-    """
-    lr = LinearRegression()
-    lr.fit(X[:, predictors], X[:, target])
-    weight = np.power(np.abs(lr.coef_), gamma)
-    reg = LassoLarsIC(criterion='bic')
-    reg.fit(X[:, predictors] * weight, X[:, target])
-    return reg.coef_ * weight
-
-def estimate_adjacency_matrix(X, causal_order):
-    """Estimate adjacency matrix by causal order.
-
-        Parameters
-        ----------
-        X : array-like, shape (n_samples, n_features)
-            Training data, where n_samples is the number of samples
-            and n_features is the number of features.
-        prior_knowledge : array-like, shape (n_variables, n_variables), optional (default=None)
-            Prior knowledge matrix.
-
-        Returns
-        -------
-        self : object
-            Returns the instance itself.
-    """
-    sink_vars = []
-    exo_vars = []
-
-    B = np.zeros([X.shape[1], X.shape[1]], dtype='float64')
-    for i in range(1, len(causal_order)):
-        target = causal_order[i]
-        predictors = causal_order[:i]
-
-        # target is not used for prediction if it is included in exogenous variables
-        if target in exo_vars:
-            continue
-
-        # sink variables are not used as predictors
-        predictors = [v for v in predictors if v not in sink_vars]
-
-        B[target, predictors] = predict_adaptive_lasso(
-            X, predictors, target)
-
-    return B
-
-def prune(X, real_A, fake_A, N):
-    W = np.linalg.inv(fake_A)
- # obtain a permuted W_ica
-    _, col_index = linear_sum_assignment(1 / np.abs(W))
-    PW_ica = np.zeros_like(W)
-    PW_ica[col_index] = W
-
-    # obtain a vector to scale
-    D = np.diag(PW_ica)[:, np.newaxis]
-
-    # estimate an adjacency matrix
-    W_estimate = PW_ica / D
-    B_estimate = np.eye(len(W_estimate)) - W_estimate
-
-    causal_order = estimate_causal_order(B_estimate)
-    
-    B = estimate_adjacency_matrix(X, causal_order)
-    return B
 
 
 def consolidatebasis(Aobs):
@@ -249,7 +92,11 @@ def basis2model(Aobs, means, eng):
             return []
         Ap = Ap[iperm(p), :]
         Ap = Ap[:, iperm(p)]
-        W = np.linalg.inv(Ap)
+        try:
+             W = np.linalg.inv(Ap)
+        except:
+            return []
+
         e = 1 / np.diag(W)
         a = np.diag(W)
         a = a.reshape((N,1))
@@ -318,10 +165,6 @@ def basis2model(Aobs, means, eng):
         Aaug = Aaug[vn, :]
         Aaug = Aaug[:, vn]
 
-        # p1,l1,u1 = lu(Aaug)
-        # print(u1)
-        # u2 = u1[vn, :]
-        # u2 = u2[:, vn]
         # print(np.sum(abs(np.triu(Aaug, 1))) > 1e-12 or np.linalg.cond(Aaug) > 1e+12)
         if np.sum(abs(np.triu(Aaug, 1))) > 1e-12 or np.linalg.cond(Aaug) > 1e+12:
             continue
@@ -378,7 +221,6 @@ def basis2model(Aobs, means, eng):
     return lvmodelset
 
 def estimate2model(Aobs, means,eng):
-    # 调用matlab引擎
     
     N = Aobs.shape[1]
     No = Aobs.shape[0]
@@ -391,7 +233,7 @@ def estimate2model(Aobs, means,eng):
     dummy = np.sort(-abs(Aobs.flatten('F')))
     sortind = np.unravel_index(np.argsort(-abs(Aobs), axis=None), Aobs.shape)
     nind = len(Aobs.flatten('F'))
-    minzeros = int(No * (No + 1) / 2)
+    minzeros = int(No * (No - 1) / 2)
     patnum = 0
     
     existzeros = len(np.nonzero(Aobs)[0])
@@ -447,30 +289,3 @@ def estimate2model(Aobs, means,eng):
     #         break
 
     return lvmodelset
-
-
-if __name__ == '__main__':
-    
-    test_data_1 = np.load('test_data_9_1_B.npz')
-    X = test_data_1['X']
-    B = test_data_1['B']
-    lat = test_data_1['lat']
-    test_data = np.load('test_data_9_1.npz')
-    fake_A =  test_data['fake_A']
-    means= test_data['means']
-    N = 5
-    Nh = 1
-
-    a = math.factorial(90) / (math.factorial(36) * math.factorial(54))
-    b = 2 ** 90
-    c = b-a
-    lvmodelset,cutpercent = estimate2model(fake_A, means)
-    print('--真实 B--')
-    print(B)
-    print('--估计 B--')
-    print(lvmodelset[0])
-    plot_function.plotmodel(B, lat,'LFOICA_dag_0')
-    plot_function.plotmodel(lvmodelset[0], lat,'LFOICA_dag_1')
-        
-    plot_function.plotmodel(lvmodelset[1], lat,'LFOICA_dag_2')
-    print('end')

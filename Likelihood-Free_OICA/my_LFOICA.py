@@ -135,8 +135,8 @@ def matchbases(Aest, N):
     return Amatched
 
 
-
-def LFOICA_exp(data_arrs, num_mixtures, num_components, means,eng,num_epochs = 100, batch_size = 80, print_int = 10):
+# 能否在gan的过程中，将一些值先置零
+def LFOICA_exp(data_arrs, num_mixtures, num_components, means,eng,num_epochs = 128, batch_size = 90, print_int = 10):
     
     # 参数设置
     sigmaList = [0.001, 0.01]
@@ -183,7 +183,6 @@ def LFOICA_exp(data_arrs, num_mixtures, num_components, means,eng,num_epochs = 1
     MSE = MSE_func(real_A, fake_A)
     print('MSE: {}, MMD: {}'.format(MSE, MMD))
 
-    
     # 需要剪枝
     real_A_nd = real_A.numpy()
     fake_A_nd = fake_A.numpy()
@@ -191,79 +190,3 @@ def LFOICA_exp(data_arrs, num_mixtures, num_components, means,eng,num_epochs = 1
     # 要进行剪枝，利用lvlingam的剪枝策略
     lvmodelset = LFOICA_prune.estimate2model(fake_A_nd, means, eng)
     return fake_A_nd,lvmodelset
-    
-    # 计算均值
-    means =  dataset.get_means()
-
-    # 利用ica_lingam的剪枝策略
-    B1 = LFOICA_prune.Prune(X, real_A, fake_A, num_components)
-    
-
-    # 恢复出 B
-
-    # fake_A_nd = np.append(fake_A_nd, np.eye(num_components)[num_mixtures:,:],axis=0)
-    
-    
-    # bootstrap obtaining a set of estimates Ai representing our uncertainty regarding the elements of the mixing matrix
-    # Nest = 20
-    # Aest = []
-    # mest = []
-    # noiselevel = 0.1 # 估计时的噪声
-    # for i in range(Nest):
-    #     rp = np.random.permutation(num_components)
-    #     Aest.append(fake_A_nd[:, rp])
-    #     # Aest[i] = Aest[i] + noiselevel * np.random.randn(num_mixtures, num_components)
-    #     mest.append(noiselevel * np.random.randn(means.shape[0],means.shape[1]))
-
-    # # Match up all the bases
-    # Amatched = matchbases(Aest, num_components)
-  
-    # # Calculate mean and variance of 'estimated' ICA coefficients
-    # Am = np.zeros(fake_A_nd.shape)
-    # mm = np.zeros(means.shape)
-    # for i in range(Nest):
-    #     Am = Am + Amatched[i]
-    #     mm = mm + mest[i]
-
-    # Am = Am / Nest
-    # mm = mm / Nest;
-    # Av = np.zeros(Am.shape)
-    # for i in range(Nest):
-    #   Av = Av + (Amatched[i] - Am) ** 2
-    
-    # Av = Av / Nest
-  
-    # # Infer zeros and set them to zero
-    # threshold = 1
-    # zeromat = np.abs(Am) < (threshold * np.sqrt(Av))
-    # for i in range(zeromat.shape[0]):
-    #     for j in range(zeromat.shape[1]):
-    #        if zeromat[i,j] == True:
-    #            Am[i,j] = 0
-    # print('indetify zeros in A')
-    # print(zeromat)
-    # real_zeromat = (real_A_nd == 0)
-    # print(real_zeromat)
-    # print(zeromat)
-    # for i in range(Nest):
-    #     Amatched[i](zeromat) = 0;
-
-    
-    # Calculate statistics on success in identifying zeros
-
-
-
-    
-    # 寻找因果顺序
-    # 1e12
-
-
-    # identify zero
-    
-    p,l,u =  lu(fake_A_nd)
-    print(u)
-
-    fake_B = np.eye(num_components)-np.linalg.inv(fake_A_nd)
-
-    print('fake_B',fake_B)
-    return fake_B
